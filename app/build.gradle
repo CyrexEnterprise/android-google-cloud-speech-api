@@ -1,0 +1,53 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.2"
+
+    defaultConfig {
+        applicationId "com.cloudoki.demo3"
+        minSdkVersion 19
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+
+        // Enabling multidex support.
+        multiDexEnabled true
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE.txt'
+        exclude 'META-INF/NOTICE.txt'
+        exclude 'META-INF/INDEX.LIST'
+        exclude 'META-INF/io.netty.versions.properties'
+        exclude 'META-INF/io.grpc.ManagedChannelProvider'
+        exclude 'META-INF/services/io.grpc.ManagedChannelProvider'
+        pickFirst 'META-INF/license.txt'
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:24.2.0'
+    compile 'com.android.support:design:24.2.0'
+
+    compile ('com.google.auth:google-auth-library-oauth2-http:0.4.0') {
+        exclude group: 'com.google.guava', module: 'guava-jdk5'
+        exclude group: 'com.google.guava', module: 'slice-guava-jdk5'
+    }
+
+    compile ('com.google.api.grpc:grpc-google-cloud-speech-v1beta1:0.0.7'){
+        exclude group: 'com.google.guava', module: 'guava-jdk5'
+    }
+    compile 'com.google.guava:guava:19.0'
+
+}
