@@ -1,14 +1,22 @@
 package com.cloudoki.demo3;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.cloudoki.demo3.googlecloud.MicrophoneStreamRecognize;
 
@@ -38,6 +46,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // checking permissions
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            int RECORD_AUDIO = 666;
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    RECORD_AUDIO);
+        }
+
+        permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_NETWORK_STATE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            int ACCESS_NETWORK_STATE = 333;
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_NETWORK_STATE},
+                    ACCESS_NETWORK_STATE);
+        }
+
 
         final Button startButton = (Button) findViewById(R.id.startStreaming);
         startButton.setOnClickListener(new View.OnClickListener() {
@@ -48,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run(){
 
                         try {
-
+                            Log.d("Main Activity", "Start");
                             client = new MicrophoneStreamRecognize(getResources().openRawResource(R.raw.ricmalta_d929e2f283d9_service));
                             client.start();
                         } catch (IOException e) {
@@ -69,8 +98,10 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 try {
+                    Log.d("Main Activity", "Stop");
                     runner.join();
                     client.stop();
+                    client = null;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

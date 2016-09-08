@@ -40,6 +40,8 @@ dependencies {
     compile 'com.android.support:appcompat-v7:24.2.0'
     compile 'com.android.support:design:24.2.0'
 
+    compile ('com.google.auth:google-auth-library-credentials:0.4.0')
+
     compile ('com.google.auth:google-auth-library-oauth2-http:0.4.0') {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
         exclude group: 'com.google.guava', module: 'slice-guava-jdk5'
@@ -49,5 +51,12 @@ dependencies {
         exclude group: 'com.google.guava', module: 'guava-jdk5'
     }
     compile 'com.google.guava:guava:19.0'
+
+    compile 'io.grpc:grpc-auth:1.0.0'
+    compile 'io.grpc:grpc-okhttp:1.0.0'
+    compile 'io.grpc:grpc-netty:1.0.0'
+    compile 'io.grpc:grpc-protobuf:1.0.0'
+    compile 'io.grpc:grpc-stub:1.0.0'
+    compile 'io.netty:netty-tcnative-boringssl-static:1.1.33.Fork22'
 
 }
