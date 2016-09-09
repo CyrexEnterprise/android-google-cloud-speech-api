@@ -1,10 +1,7 @@
 package com.cloudoki.demo3;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -16,19 +13,29 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
-import android.widget.Toast;
 
-import com.cloudoki.demo3.googlecloud.MicrophoneStreamRecognize;
+import com.cloudoki.demo3.googlecloud.MicrophoneStreamRecognizeClient;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.GeneralSecurityException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private MicrophoneStreamRecognize client;
-    private final String AUTHORIZATION_FILE = "ricmalta_d929e2f283d9_service.json";
-    private Thread runner;
+    private Thread runner = new Thread() {
+
+        public void run(){
+
+            try {
+                Log.d("Main Activity", "Start");
+                MicrophoneStreamRecognizeClient client;
+                client = new MicrophoneStreamRecognizeClient(getResources().openRawResource(R.raw.ricmalta_d929e2f283d9_service));
+                client.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    };;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,24 +79,7 @@ public class MainActivity extends AppCompatActivity {
         startButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
-                runner = new Thread() {
-
-                    public void run(){
-
-                        try {
-                            Log.d("Main Activity", "Start");
-                            client = new MicrophoneStreamRecognize(getResources().openRawResource(R.raw.ricmalta_d929e2f283d9_service));
-                            client.start();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                };
-
-                runner.start();
+            runner.start();
             }
         });
 
@@ -100,8 +90,6 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Log.d("Main Activity", "Stop");
                     runner.join();
-                    client.stop();
-                    client = null;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

@@ -14,26 +14,12 @@ import com.google.cloud.speech.v1beta1.StreamingRecognitionResult;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeRequest;
 import com.google.cloud.speech.v1beta1.StreamingRecognizeResponse;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.TextFormat;
-import com.google.longrunning.ListOperationsResponse;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 
@@ -46,27 +32,20 @@ public class StreamingRecognizeClient {
     private int RECORDER_CHANNELS;
     private int RECORDER_AUDIO_ENCODING;
 
+    private String TAG = "StreamRecognizeClient";
+
     private int bufferSize = 0;
 
     private static final Logger logger = Logger.getLogger(StreamingRecognizeClient.class.getName());
 
     private final ManagedChannel channel;
-
     private final SpeechGrpc.SpeechStub speechClient;
-
-    private static final int BYTES_PER_BUFFER = 3200; //buffer size in bytes
-    private static final int BYTES_PER_SAMPLE = 2; //bytes per sample for LINEAR16
+    private StreamObserver<StreamingRecognizeResponse> responseObserver;
+    private StreamObserver<StreamingRecognizeRequest> requestObserver;
 
     private AudioRecord recorder = null;
 
-    private Thread recordingThread = null;
-
-
-    /**
-     * Construct client connecting to Cloud Speech server at {@code host:port}.
-     */
-    public StreamingRecognizeClient(ManagedChannel channel)
-            throws IOException {
+    public StreamingRecognizeClient(ManagedChannel channel) throws IOException {
 
         this.RECORDER_SAMPLERATE = 16000;
         this.RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
@@ -78,88 +57,74 @@ public class StreamingRecognizeClient {
         this.channel = channel;
 
         speechClient = SpeechGrpc.newStub(channel);
+
+        responseObserver = new StreamObserver<StreamingRecognizeResponse>() {
+            @Override
+            public void onNext(StreamingRecognizeResponse response) {
+
+                int numOfResults = response.getResultsCount();
+
+                if( numOfResults > 0 ){
+
+                    for (int i=0;i<numOfResults;i++){
+
+                        StreamingRecognitionResult result = response.getResultsList().get(i);
+
+                        if( result.getIsFinal() )
+                            Log.d("\tFinal",  result.getAlternatives(0).getTranscript());
+                        else
+                            Log.d("Partial",  result.getAlternatives(0).getTranscript());
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Throwable error) {
+                Log.w(TAG, "Recognize failed: {0}", error);
+
+                try {
+                    shutdown(false);
+                    recognize();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onCompleted() {
+                Log.i(TAG, "Recognize complete.");
+
+                try {
+                    shutdown();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        requestObserver = speechClient.streamingRecognize(responseObserver);
     }
 
     public void shutdown() throws InterruptedException {
+        shutdown(true);
+    }
+
+    public void shutdown(boolean closeChannel) throws InterruptedException {
 
         if( recorder != null ){
             recorder.stop();
             recorder.release();
             recorder = null;
         }
-
-        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+        if( closeChannel )
+            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
     /** Send streaming recognize requests to server. */
     public void recognize() throws InterruptedException, IOException {
 
-        final CountDownLatch finishLatch = new CountDownLatch(1);
-
-        StreamObserver<StreamingRecognizeResponse> responseObserver =
-
-            new StreamObserver<StreamingRecognizeResponse>() {
-                @Override
-                public void onNext(StreamingRecognizeResponse response) {
-
-                    int numOfResults = response.getResultsCount();
-
-                    if( numOfResults > 0 ){
-
-                        //Log.d("Results #", String.valueOf(numOfResults));
-
-                        for (int i=0;i<numOfResults;i++){
-
-                            StreamingRecognitionResult result = response.getResultsList().get(i);
-
-                            if( result.getIsFinal() )
-                                Log.d("\tFinal",  result.getAlternatives(0).getTranscript());
-                            else
-                                Log.d(" Partial",  result.getAlternatives(0).getTranscript());
-
-                        }
-                    }
-                }
-
-                @Override
-                public void onError(Throwable error) {
-                    //logger.log(Level.WARNING, "recognize failed: {0}", error);
-                    finishLatch.countDown();
-                    if( recorder != null ){
-                        recorder.stop();
-                        recorder.release();
-                        recorder = null;
-                    }
-
-                    try {
-                        recognize();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                    //logger.info("recognize completed.");
-                    finishLatch.countDown();
-                    if( recorder != null ){
-                        recorder.stop();
-                        recorder.release();
-                        recorder = null;
-                    }
-                    try {
-                        recognize();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            };
-
-        final StreamObserver<StreamingRecognizeRequest> requestObserver = speechClient.streamingRecognize(responseObserver);
         try {
             // Build and send a StreamingRecognizeRequest containing the parameters for
             // processing the audio.
@@ -167,6 +132,7 @@ public class StreamingRecognizeClient {
                     RecognitionConfig.newBuilder()
                             .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
                             .setSampleRate(this.RECORDER_SAMPLERATE)
+                            //.setLanguageCode("en-US")
                             .build();
 
             // Sreaming config
@@ -187,28 +153,29 @@ public class StreamingRecognizeClient {
                     this.RECORDER_SAMPLERATE,
                     this.RECORDER_CHANNELS,
                     this.RECORDER_AUDIO_ENCODING,
-                    BYTES_PER_BUFFER);
+                    bufferSize);
 
             recorder.startRecording();
 
             byte[] buffer = new byte[bufferSize];
             int recordState;
+
+            // loop through the audio samplings
             while ( (recordState = recorder.read(buffer, 0, buffer.length) ) > -1 ) {
 
                 // skip if there is no data
                 if( recordState < 0 )
                     continue;
 
+                // create a new recognition request
                 StreamingRecognizeRequest request =
                         StreamingRecognizeRequest.newBuilder()
                                 .setAudioContent(ByteString.copyFrom(buffer, 0, buffer.length))
                                 .build();
-                requestObserver.onNext(request);
-                // To simulate real-time audio, sleep after sending each audio buffer.
-                //Thread.sleep(samplesPerBuffer / samplesPerMillis);
-            }
 
-            Log.d("-- Last record state", String.valueOf(recordState));
+                // put it on the works
+                requestObserver.onNext(request);
+            }
 
         } catch (RuntimeException e) {
             // Cancel RPC.
@@ -217,8 +184,5 @@ public class StreamingRecognizeClient {
         }
         // Mark the end of requests.
         requestObserver.onCompleted();
-
-        // Receiving happens asynchronously.
-        finishLatch.await(1, TimeUnit.MINUTES);
     }
 }
