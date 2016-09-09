@@ -106,12 +106,16 @@ public class StreamingRecognizeClient {
 
                     if( numOfResults > 0 ){
 
-                        Log.d("Received response ++", String.valueOf(numOfResults));
+                        //Log.d("Results #", String.valueOf(numOfResults));
 
                         for (int i=0;i<numOfResults;i++){
+
                             StreamingRecognitionResult result = response.getResultsList().get(i);
+
                             if( result.getIsFinal() )
-                                Log.d("Result", "YES");
+                                Log.d("\tFinal",  result.getAlternatives(0).getTranscript());
+                            else
+                                Log.d(" Partial",  result.getAlternatives(0).getTranscript());
 
                         }
                     }
@@ -119,7 +123,7 @@ public class StreamingRecognizeClient {
 
                 @Override
                 public void onError(Throwable error) {
-                    logger.log(Level.WARNING, "recognize failed: {0}", error);
+                    //logger.log(Level.WARNING, "recognize failed: {0}", error);
                     finishLatch.countDown();
                     if( recorder != null ){
                         recorder.stop();
@@ -138,7 +142,7 @@ public class StreamingRecognizeClient {
 
                 @Override
                 public void onCompleted() {
-                    logger.info("recognize completed.");
+                    //logger.info("recognize completed.");
                     finishLatch.countDown();
                     if( recorder != null ){
                         recorder.stop();
@@ -184,14 +188,6 @@ public class StreamingRecognizeClient {
                     this.RECORDER_CHANNELS,
                     this.RECORDER_AUDIO_ENCODING,
                     BYTES_PER_BUFFER);
-
-            // For LINEAR16 at 16000 Hz sample rate, 3200 bytes corresponds to 100 milliseconds of audio.
-
-            //int bytesRead;
-            //int totalBytes = 0;
-            //int samplesPerBuffer =   BYTES_PER_BUFFER / BYTES_PER_SAMPLE;
-            //int samplesPerMillis = samplingRate / 1000;
-
 
             recorder.startRecording();
 
