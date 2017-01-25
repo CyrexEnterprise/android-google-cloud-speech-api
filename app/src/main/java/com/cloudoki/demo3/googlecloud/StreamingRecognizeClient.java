@@ -45,7 +45,9 @@ public class StreamingRecognizeClient {
 
     private AudioRecord recorder = null;
 
-    public StreamingRecognizeClient(ManagedChannel channel) throws IOException {
+    private IResults mScreen;
+
+    public StreamingRecognizeClient(ManagedChannel channel, IResults screen) throws IOException {
 
         this.RECORDER_SAMPLERATE = 16000;
         this.RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
@@ -55,6 +57,7 @@ public class StreamingRecognizeClient {
                 RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
 
         this.channel = channel;
+        this.mScreen = screen;
 
         speechClient = SpeechGrpc.newStub(channel);
 
@@ -69,11 +72,17 @@ public class StreamingRecognizeClient {
                     for (int i=0;i<numOfResults;i++){
 
                         StreamingRecognitionResult result = response.getResultsList().get(i);
+                        String text = result.getAlternatives(0).getTranscript();
 
-                        if( result.getIsFinal() )
-                            Log.d("\tFinal",  result.getAlternatives(0).getTranscript());
-                        else
-                            Log.d("Partial",  result.getAlternatives(0).getTranscript());
+                        if( result.getIsFinal() ){
+                            Log.d("\tFinal",  text);
+                            mScreen.onFinal(text);
+                        }
+                        else{
+                            Log.d("Partial",  text);
+                            mScreen.onPartial(text);
+                        }
+
                     }
                 }
             }

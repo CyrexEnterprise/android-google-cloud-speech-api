@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.google.protobuf'
 
 android {
     compileSdkVersion 24
@@ -34,29 +35,75 @@ android {
     }
 }
 
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.0.0'
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.0.0'
+        }
+        javalite {
+            artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
+        }
+    }
+    generateProtoTasks {
+        all().each {
+            task ->
+                task.builtins {
+                    remove javanano
+                    java {
+                    }
+                }
+                task.plugins {
+                    grpc {
+                    }
+                }
+        }
+    }
+}
+
+ext {
+    supportLibraryVersion = '24.2.0'
+    grpcVersion = '1.0.0'
+}
+
 dependencies {
+    // Generic dependencies
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:24.2.0'
     compile 'com.android.support:design:24.2.0'
 
-    compile ('com.google.auth:google-auth-library-credentials:0.4.0')
+    // Support libraries
+    compile "com.android.support:appcompat-v7:$supportLibraryVersion"
+    compile "com.android.support:design:$supportLibraryVersion"
+    compile "com.android.support:cardview-v7:$supportLibraryVersion"
+    compile "com.android.support:recyclerview-v7:$supportLibraryVersion"
 
-    compile ('com.google.auth:google-auth-library-oauth2-http:0.4.0') {
-        exclude group: 'com.google.guava', module: 'guava-jdk5'
-        exclude group: 'com.google.guava', module: 'slice-guava-jdk5'
+    // gRPC
+    compile 'javax.annotation:javax.annotation-api:1.2'
+    compile("io.grpc:grpc-protobuf:${grpcVersion}") {
+        exclude module: 'jsr305'
     }
-
-    compile ('com.google.api.grpc:grpc-google-cloud-speech-v1beta1:0.0.7'){
-        exclude group: 'com.google.guava', module: 'guava-jdk5'
+    compile("io.grpc:grpc-stub:${grpcVersion}") {
+        exclude module: 'jsr305'
     }
-    compile 'com.google.guava:guava:19.0'
+    compile("io.grpc:grpc-auth:${grpcVersion}") {
+        exclude module: 'jsr305'
+    }
+    compile("io.grpc:grpc-okhttp:${grpcVersion}") {
+        exclude module: 'jsr305'
+    }
+    // OAuth2 for Google API
+    compile('com.google.auth:google-auth-library-oauth2-http:0.3.0') {
+        exclude module: 'jsr305'
+        exclude module: 'httpclient'
+    }
+    // secure request so that sslv3 won't be used
+    compile 'info.guardianproject.netcipher:netcipher:1.2'
 
-    compile 'io.grpc:grpc-auth:1.0.0'
-    compile 'io.grpc:grpc-okhttp:1.0.0'
-    compile 'io.grpc:grpc-netty:1.0.0'
-    compile 'io.grpc:grpc-protobuf:1.0.0'
-    compile 'io.grpc:grpc-stub:1.0.0'
-    compile 'io.netty:netty-tcnative-boringssl-static:1.1.33.Fork22'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.mockito:mockito-core:2.2.28'
 
 }

@@ -50,10 +50,10 @@ public class MicrophoneStreamRecognizeClient {
      * @param autorizationFile
      * @throws IOException
      */
-    public MicrophoneStreamRecognizeClient(InputStream autorizationFile) throws IOException {
+    public MicrophoneStreamRecognizeClient(InputStream autorizationFile, IResults screen) throws IOException {
 
         channel = createChannel(autorizationFile, host, port);
-        client = new StreamingRecognizeClient(channel);
+        client = new StreamingRecognizeClient(channel, screen);
     }
 
     /**

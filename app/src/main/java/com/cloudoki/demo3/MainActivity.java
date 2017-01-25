@@ -13,12 +13,18 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.TextView;
 
+import com.cloudoki.demo3.googlecloud.IResults;
 import com.cloudoki.demo3.googlecloud.MicrophoneStreamRecognizeClient;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements IResults {
+
+    private IResults Self = this;
+    private TextView textView;
 
     private Thread runner = new Thread() {
 
@@ -27,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Log.d("Main Activity", "Start");
                 MicrophoneStreamRecognizeClient client;
-                client = new MicrophoneStreamRecognizeClient(getResources().openRawResource(R.raw.ricmalta_d929e2f283d9_service));
+                client = new MicrophoneStreamRecognizeClient(getResources().openRawResource(R.raw.client_secret_apps_googleusercontent_com), Self);
                 client.start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -35,23 +41,13 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-    };;
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        textView = (TextView)findViewById(R.id.textView);
 
         // checking permissions
         int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
@@ -117,5 +113,38 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void setText(String text){
+        runOnUiThread(new Runnable() {
+
+            String text;
+            public Runnable set(String text) {
+                this.text = text;
+                return this;
+            }
+
+            @Override
+            public void run() {
+
+                if(textView != null){
+                    textView.setText(text+textView.getText());
+
+                }
+            }
+
+        }.set(text));
+    }
+
+    @Override
+    public void onPartial(String text) {
+
+        setText("Partial: "+text+"\n");
+    }
+
+    @Override
+    public void onFinal(String text) {
+
+        setText("Final: "+text+"\n");
     }
 }

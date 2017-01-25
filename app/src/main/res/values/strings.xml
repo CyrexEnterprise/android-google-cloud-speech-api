@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Demo3</string>
+    <string name="app_name">Google Cloud Speech + Android demo</string>
     <string name="action_settings">Settings</string>
 </resources>
